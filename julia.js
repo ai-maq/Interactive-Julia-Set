@@ -6,7 +6,7 @@ let gl,
     vertices,
     mouseDown,
     escape_max,
-    nt = 100,
+    nt = 150,
     viewProjectionMat;
 
 const camera = {

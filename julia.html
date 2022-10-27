@@ -55,9 +55,9 @@
                 // vec4 stable_color = vec4(0.99, 0.57, 0.0, 1.0);
                 // vec4 stable_color_pro_max = vec4(0.5, 0.2, 0.1, 1.0);
                 
-                vec4 shoot_color = vec4(0.0, 0.0, 0.0, 1.0);
-                vec4 stable_color = vec4(0.0, 1.0, 0.0, 1.0);
-                vec4 stable_color_pro_max = vec4(1.0, 1.0, 1.0, 0.5);
+                vec4 shoot_color = vec4(0.28125, 0.81640625, 0.796875, 1.0);
+                vec4 stable_color = vec4(0.13671875, 0.16015625, 0.4765625, 1.0);
+                vec4 stable_color_pro_max = vec4(0.6953125, 1.0, 1.0, 1.0);
 
                 int escape_time = 1;
                 float zx = position[0] * 2.0 / c_zoom + cam_x;
@@ -82,10 +82,37 @@
         <script type="text/javascript" src="map.js"></script>
         <script type="text/javascript" src="julia.js"></script>
     </head>
+<style>
+    * {
+        background-color: rgb(72, 209, 204);
+        margin: 0%;
+        padding: 0%;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
+    h1 {
+        /* color:rgb(178,255,255); */
+        color:rgb(0, 3, 3);
+        text-align: right;
+        padding-right: 500px;
+        padding-top: 100px;
+        font-size: xx-large;
+        
+    }
+    /* canvas {
+        align-items: center;
+        /* padding-left: 500px; */
+        border: 1 black;
+    } */
+</style>
 
     <body>
-        <canvas id="gl-canvas" width="750" height="750">
-            Oops ... your browser doesn't support the HTML5 canvas element
-        </canvas>
+        <div><h1>Render Jam Fall 2022</h1></div>
+        <div>
+            <canvas id="gl-canvas" width="750" height="750">
+                Oops ... your browser doesn't support the HTML5 canvas element
+            </canvas>
+        </div>
+        
+        
     </body>
 </html>
