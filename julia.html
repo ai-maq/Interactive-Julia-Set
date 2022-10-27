@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html;charset=utf-8" >
+        <title>WebGL Julia Set By GPU</title>
+
+        <script id="vertex-shader" type="x-shader/x-vertex">
+            #version 300 es
+            
+            in vec2 vPosition;
+            uniform mat3 matrix;
+            out vec2 position;
+        
+            void main()
+            {
+                gl_Position = vec4(matrix * vec3(vPosition, 0.0), 1.0);
+                position = vPosition;
+            } 
+        </script> 
+
+        <script id="fragment-shader" type="x-shader/x-fragment">
+            #version 300 es
+
+            precision highp float;
+            
+            uniform float c_x;
+            uniform float c_y;
+            uniform float c_zoom;
+            uniform float cam_x;
+            uniform float cam_y;
+            uniform int nt;
+            
+            in vec2 position;
+            
+            out vec4 fragColor;
+            
+            float square_mag(float x, float y) { return pow(x, 2.0) + pow(y, 2.0); }
+            
+            vec2 sqr(float x, float y) { return vec2(pow(x,2.0) - pow(y,2.0), 2.0*x*y); }
+            
+            // quadratic mapping of X from the space of P,Q,R to space of A,B,<Canvas></Canvas>
+            vec4 map_point_quadratic(float P, float Q, float R,
+                                    vec4 A, vec4 B, vec4 C,
+                                    float X)
+            {
+                float a = (X - Q) * (X - R) / ((P - Q) * (P - R));
+                float b = (X - P) * (X - R) / ((Q - P) * (Q - R));
+                float c = (X - P) * (X - Q) / ((R - P) * (R - Q));
+                return a * A + b * B + c * C;
+            }
+
+            void main()
+            {
+                // vec4 shoot_color = vec4(0.0, 0.0, 0.0, 1.0);
+                // vec4 stable_color = vec4(0.99, 0.57, 0.0, 1.0);
+                // vec4 stable_color_pro_max = vec4(0.5, 0.2, 0.1, 1.0);
+                
+                vec4 shoot_color = vec4(0.0, 0.0, 0.0, 1.0);
+                vec4 stable_color = vec4(0.0, 1.0, 0.0, 1.0);
+                vec4 stable_color_pro_max = vec4(1.0, 1.0, 1.0, 0.5);
+
+                int escape_time = 1;
+                float zx = position[0] * 2.0 / c_zoom + cam_x;
+                float zy = position[1] * 2.0 / c_zoom + cam_y;
+                
+                while (square_mag(zx, zy) <= 4.0 && escape_time < nt){
+                    vec2 z = sqr(zx, zy);
+                    zx = z[0] + c_x*2.0;
+                    zy = z[1] + c_y*2.0;
+                    escape_time ++;
+                }
+
+                fragColor = map_point_quadratic(1.0, float(nt)/5.0, float(nt), 
+                                                shoot_color, stable_color, stable_color_pro_max,
+                                                float(escape_time));
+            }
+        </script>
+
+
+        <script type="text/javascript" src="initShadersES6.js"></script>
+        <script type="text/javascript" src="MVES6.js"></script>
+        <script type="text/javascript" src="map.js"></script>
+        <script type="text/javascript" src="julia.js"></script>
+    </head>
+
+    <body>
+        <canvas id="gl-canvas" width="750" height="750">
+            Oops ... your browser doesn't support the HTML5 canvas element
+        </canvas>
+    </body>
+</html>
