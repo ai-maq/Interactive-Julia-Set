@@ -10,22 +10,21 @@ let gl,
     viewProjectionMat;
 
 const camera = {
-    x: 0.0,
-    y: 0.0,
-    rotation: 0,
-    zoom: 1.0,
-};
+        x: 0.0,
+        y: 0.0,
+        rotation: 0,
+        zoom: 1.0,
+    },
+    projection = [1, 0, 0, 0, -1, 0, 0, 0, 1];
 
-window.onload = function init() {
+window.onload = () => {
     let canvas = document.getElementById("gl-canvas");
     gl = canvas.getContext("webgl2");
     if (!gl) alert("WebGL 2.0 isn't available");
 
-    //  Configure WebGL
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(1.0, 1.0, 1.0, 1.0);
 
-    // vertices of the corners of the canvas
     vertices = [
         vec2(-1.0, 1.0),
         vec2(1.0, 1.0),
@@ -55,26 +54,22 @@ window.onload = function init() {
     canvas.addEventListener("wheel", (e) => {
         e.preventDefault();
         const [clipX, clipY] = getClipSpaceMousePosition(e);
-        // position before zooming
+
         const [preZoomX, preZoomY] = transformPoint(
             flatten(inverse3(viewProjectionMat)),
             [clipX, clipY]
         );
 
-        // multiply the wheel movement by the current zoom level
-        // so we zoom less when zoomed in and more when zoomed out
         const newZoom = camera.zoom * Math.pow(2, e.deltaY * -0.01);
         camera.zoom = Math.max(0.02, Math.min(100000000, newZoom));
 
         updateViewProjection();
 
-        // position after zooming
         const [postZoomX, postZoomY] = transformPoint(
             flatten(inverse3(viewProjectionMat)),
             [clipX, clipY]
         );
 
-        // camera needs to be moved the difference of before and after
         camera.x += preZoomX - postZoomX;
         camera.y += preZoomY - postZoomY;
 
@@ -96,15 +91,12 @@ window.onload = function init() {
 };
 
 const render = () => {
-    //  Load shaders and initialize attribute buffers
     let program = initShaders(gl, "vertex-shader", "fragment-shader");
     gl.useProgram(program);
 
-    // Load the data into the GPU and bind to shader variables.
     gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
     gl.bufferData(gl.ARRAY_BUFFER, flatten(vertices), gl.STATIC_DRAW);
 
-    // Associate out shader variables with our data buffer
     let vPosition = gl.getAttribLocation(program, "vPosition");
     gl.vertexAttribPointer(vPosition, 2, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(vPosition);
@@ -136,9 +128,6 @@ const render = () => {
     updateViewProjection();
 };
 
-// Note: This matrix flips the Y axis so 0 is at the top.
-const projection = () => [1, 0, 0, 0, -1, 0, 0, 0, 1];
-
 const transformPoint = (m, v) => {
     const v0 = v[0],
         v1 = v[1],
@@ -151,8 +140,7 @@ const transformPoint = (m, v) => {
 };
 
 const updateViewProjection = () => {
-    // same as ortho(0, width, height, 0, -1, 1)
-    const projectionMat = mat3(projection(gl.canvas.width, gl.canvas.height));
+    const projectionMat = mat3(projection);
     const cameraMat = makeCameraMatrix();
     let viewMat = inverse3(cameraMat);
     viewProjectionMat = mult(projectionMat, viewMat);
