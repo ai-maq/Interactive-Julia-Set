@@ -1,44 +1,45 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <meta http-equiv="Content-Type" content="text/html;charset=utf-8" >
+        <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
         <title>WebGL Julia Set By GPU</title>
 
         <script id="vertex-shader" type="x-shader/x-vertex">
             #version 300 es
-            
+
             in vec2 vPosition;
+
             uniform mat3 matrix;
+
             out vec2 position;
-        
+
             void main()
             {
                 gl_Position = vec4(matrix * vec3(vPosition, 0.0), 1.0);
                 position = vPosition;
-            } 
-        </script> 
+            }
+        </script>
 
         <script id="fragment-shader" type="x-shader/x-fragment">
             #version 300 es
 
             precision highp float;
-            
+
             uniform float c_x;
             uniform float c_y;
             uniform float c_zoom;
             uniform float cam_x;
             uniform float cam_y;
             uniform int nt;
-            
+
             in vec2 position;
-            
+
             out vec4 fragColor;
-            
+
             float square_mag(float x, float y) { return pow(x, 2.0) + pow(y, 2.0); }
-            
-            vec2 sqr(float x, float y) { return vec2(pow(x,2.0) - pow(y,2.0), 2.0*x*y); }
-            
-            // quadratic mapping of X from the space of P,Q,R to space of A,B,<Canvas></Canvas>
+
+            vec2 sqr(float x, float y) { return vec2( pow(x, 2.0) - pow(y, 2.0), 2.0 * x * y ); }
+
             vec4 map_point_quadratic(float P, float Q, float R,
                                     vec4 A, vec4 B, vec4 C,
                                     float X)
@@ -51,10 +52,6 @@
 
             void main()
             {
-                // vec4 shoot_color = vec4(0.0, 0.0, 0.0, 1.0);
-                // vec4 stable_color = vec4(0.99, 0.57, 0.0, 1.0);
-                // vec4 stable_color_pro_max = vec4(0.5, 0.2, 0.1, 1.0);
-                
                 vec4 shoot_color = vec4(0.28125, 0.81640625, 0.796875, 1.0);
                 vec4 stable_color = vec4(0.13671875, 0.16015625, 0.4765625, 1.0);
                 vec4 stable_color_pro_max = vec4(0.6953125, 1.0, 1.0, 1.0);
@@ -62,49 +59,80 @@
                 int escape_time = 1;
                 float zx = position[0] * 2.0 / c_zoom + cam_x;
                 float zy = position[1] * 2.0 / c_zoom + cam_y;
-                
+
                 while (square_mag(zx, zy) <= 4.0 && escape_time < nt){
                     vec2 z = sqr(zx, zy);
-                    zx = z[0] + c_x*2.0;
-                    zy = z[1] + c_y*2.0;
+                    zx = z[0] + c_x * 2.0;
+                    zy = z[1] + c_y * 2.0;
                     escape_time ++;
                 }
 
-                fragColor = map_point_quadratic(1.0, float(nt)/5.0, float(nt), 
+                fragColor = map_point_quadratic(1.0, float(nt)/5.0, float(nt),
                                                 shoot_color, stable_color, stable_color_pro_max,
                                                 float(escape_time));
             }
         </script>
 
-
         <script type="text/javascript" src="initShadersES6.js"></script>
         <script type="text/javascript" src="MVES6.js"></script>
         <script type="text/javascript" src="map.js"></script>
         <script type="text/javascript" src="julia.js"></script>
+        <!-- <script
+            type="text/javascript"
+            async
+            src="https://cdn.mathjax.org/mathjax/latest/MathJax.js/MathJax.js?config=TeX-MML-AM_CHTML"
+        ></script> -->
+        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+        <script
+            type="text/javascript"
+            id="MathJax-script"
+            async
+            src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"
+        ></script>
     </head>
-<style>
-    * {
-        background-color: rgb(72, 209, 204);
-        margin: 0%;
-        padding: 0%;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-    }
-    h1 {
-        color:rgb(0, 3, 3);
-        text-align: right;
-        padding-right: 500px;
-        padding-top: 100px;
-        font-size: xx-large;
-        
-    }
-</style>
+    <style>
+        * {
+            background-color: rgb(72, 209, 204);
+            margin: 0%;
+            padding: 0%;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont,
+                "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans",
+                "Helvetica Neue", sans-serif;
+        }
+        h1 {
+            color: rgb(0, 0, 0);
+            margin-top: 30px;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: xx-large;
+        }
+        canvas {
+            padding-left: 0;
+            padding-right: 0;
+            margin-left: auto;
+            margin-right: auto;
+            display: block;
+        }
+        p {
+            color: rgb(0, 0, 0);
+            margin-left: 40px;
+            font-size: large;
+        }
+    </style>
 
     <body>
-        <div>
-            <canvas id="gl-canvas" width="750" height="750">
-                Oops ... your browser doesn't support the HTML5 canvas element
-            </canvas>
-        </div>
-        <div><h1>Render Jam Fall 2022</h1></div>
+        <h1>Julia Set</h1>
+        <p>
+            This is a simple program that generates a Julia Set. The Julia Set
+            is a fractal that is generated by iterating a function over a
+            complex plane. If we define a function, $$ f_{c}(z)=z^{2}+c $$ then
+            the Julia set \(J(f_c)\) will be defined as,
+            $$J(f_c):=\{z\in\mathbb{C}:\forall\;n\in\mathbb{N},|f^n_c(z)|\le\;2\}$$
+            where, \(f^n_c(z)\) is the \(n\)th iteration of the function
+            \(f_c\).
+        </p>
+        <canvas id="gl-canvas" width="600" height="600">
+            Oops ... your browser doesn't support the HTML5 canvas element
+        </canvas>
     </body>
 </html>

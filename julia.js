@@ -1,13 +1,13 @@
 "use strict";
 
 let gl,
-    cx,
-    cy,
+    clickX,
+    clickY,
     vertices,
     mouseDown,
-    escape_max,
-    nt = 150,
-    viewProjectionMat;
+    escapeMax,
+    itterationDepth = 150,
+    viewProjectionMatrix;
 
 const camera = {
         x: 0.0,
@@ -20,6 +20,7 @@ const camera = {
 window.onload = () => {
     let canvas = document.getElementById("gl-canvas");
     gl = canvas.getContext("webgl2");
+
     if (!gl) alert("WebGL 2.0 isn't available");
 
     gl.viewport(0, 0, canvas.width, canvas.height);
@@ -56,7 +57,7 @@ window.onload = () => {
         const [clipX, clipY] = getClipSpaceMousePosition(e);
 
         const [preZoomX, preZoomY] = transformPoint(
-            flatten(inverse3(viewProjectionMat)),
+            flatten(inverse3(viewProjectionMatrix)),
             [clipX, clipY]
         );
 
@@ -66,7 +67,7 @@ window.onload = () => {
         updateViewProjection();
 
         const [postZoomX, postZoomY] = transformPoint(
-            flatten(inverse3(viewProjectionMat)),
+            flatten(inverse3(viewProjectionMatrix)),
             [clipX, clipY]
         );
 
@@ -82,9 +83,11 @@ window.onload = () => {
 
     canvas.addEventListener("mousemove", (e) => {
         if (mouseDown) {
+            const rect = canvas.getBoundingClientRect();
             e.preventDefault();
-            cx = (2 * e.clientX) / canvas.width - 1;
-            cy = (2 * (canvas.height - e.clientY)) / canvas.height - 1;
+
+            clickX = (2 * (e.clientX - rect.left)) / canvas.width - 1;
+            clickY = (2 * (rect.top - e.clientY)) / canvas.height + 1;
             render();
         }
     });
@@ -101,17 +104,17 @@ const render = () => {
     gl.vertexAttribPointer(vPosition, 2, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(vPosition);
 
-    escape_max = gl.getUniformLocation(program, "nt");
-    gl.uniform1i(escape_max, nt);
+    escapeMax = gl.getUniformLocation(program, "nt");
+    gl.uniform1i(escapeMax, itterationDepth);
 
     let matrix = gl.getUniformLocation(program, "matrix");
     gl.uniformMatrix3fv(matrix, false, [1, 0, 0, 0, 1, 0, 0, 0, 1]);
 
     let c_x = gl.getUniformLocation(program, "c_x");
-    gl.uniform1f(c_x, cx);
+    gl.uniform1f(c_x, clickX);
 
     let c_y = gl.getUniformLocation(program, "c_y");
-    gl.uniform1f(c_y, cy);
+    gl.uniform1f(c_y, clickY);
 
     let c_zoom = gl.getUniformLocation(program, "c_zoom");
     gl.uniform1f(c_zoom, camera.zoom);
@@ -140,16 +143,19 @@ const transformPoint = (m, v) => {
 };
 
 const updateViewProjection = () => {
-    const projectionMat = mat3(projection);
-    const cameraMat = makeCameraMatrix();
+    const projectionMat = mat3(projection),
+        cameraMat = makeCameraMatrix();
     let viewMat = inverse3(cameraMat);
-    viewProjectionMat = mult(projectionMat, viewMat);
+
+    viewProjectionMatrix = mult(projectionMat, viewMat);
 };
 
 const makeCameraMatrix = () => {
     const zoomScale = 1 / camera.zoom;
     let cameraMat = mat3(1, 0, 0, 0, 1, 0, 0, 0, 1);
+
     cameraMat = mult(cameraMat, translate(camera.x, camera.y));
     cameraMat = mult(cameraMat, rotate(camera.rotation, vec3(0, 0, 1), 3));
+
     return mult(cameraMat, scale(zoomScale, zoomScale));
 };
