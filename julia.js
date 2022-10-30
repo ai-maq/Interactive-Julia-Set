@@ -1,21 +1,20 @@
 "use strict";
 
-let gl,
-    clickX,
-    clickY,
-    vertices,
-    mouseDown,
-    escapeMax,
-    itterationDepth = 150,
-    viewProjectionMatrix;
+let gl; // WebGL context
+let clickX; // x coordinate of mouse click
+let clickY; // y coordinate of mouse click
+let vertices; // vertices of the quad
+let mouseDown; // is the mouse down
+let itterationDepth = 150; // max number of iterations
+let viewProjectionMatrix; // view projection matrix
 
+const projection = [1, 0, 0, 0, -1, 0, 0, 0, 1]; // projection matrix
 const camera = {
-        x: 0.0,
-        y: 0.0,
-        rotation: 0,
-        zoom: 1.0,
-    },
-    projection = [1, 0, 0, 0, -1, 0, 0, 0, 1];
+    x: 0.0, // x position of camera
+    y: 0.0, // y position of camera
+    rotation: 0, // rotation of camera
+    zoom: 1.0, // zoom of camera
+};
 
 window.onload = () => {
     let canvas = document.getElementById("gl-canvas");
@@ -37,38 +36,38 @@ window.onload = () => {
 
     const getClipSpaceMousePosition = (e) => {
         // get canvas relative css position
-        const rect = canvas.getBoundingClientRect(),
-            cssX = e.clientX - rect.left,
-            cssY = e.clientY - rect.top;
+        const rect = canvas.getBoundingClientRect();
+        const cssX = e.clientX - rect.left;
+        const cssY = e.clientY - rect.top;
 
         // get normalized 0 to 1 position across and down canvas
-        const normalizedX = cssX / canvas.clientWidth,
-            normalizedY = cssY / canvas.clientHeight;
+        const normalizedX = cssX / canvas.clientWidth;
+        const normalizedY = cssY / canvas.clientHeight;
 
-        // convert to clip space
-        const clipX = normalizedX * 2 - 1,
-            clipY = normalizedY * -2 + 1;
+        // convert to bounding volume space
+        const clipX = normalizedX * 2 - 1;
+        const clipY = normalizedY * -2 + 1;
 
         return [clipX, clipY];
     };
 
     canvas.addEventListener("wheel", (e) => {
-        e.preventDefault();
-        const [clipX, clipY] = getClipSpaceMousePosition(e);
-
-        const [preZoomX, preZoomY] = transformPoint(
-            flatten(inverse3(viewProjectionMatrix)),
-            [clipX, clipY]
-        );
-
         const newZoom = camera.zoom * Math.pow(2, e.deltaY * -0.01);
         camera.zoom = Math.max(0.02, Math.min(100000000, newZoom));
+
+        e.preventDefault();
+
+        const clipCoordinates = getClipSpaceMousePosition(e);
+        const [preZoomX, preZoomY] = transformPoint(
+            flatten(inverse3(viewProjectionMatrix)),
+            clipCoordinates
+        );
 
         updateViewProjection();
 
         const [postZoomX, postZoomY] = transformPoint(
             flatten(inverse3(viewProjectionMatrix)),
-            [clipX, clipY]
+            clipCoordinates
         );
 
         camera.x += preZoomX - postZoomX;
@@ -88,11 +87,59 @@ window.onload = () => {
 
             clickX = (2 * (e.clientX - rect.left)) / canvas.width - 1;
             clickY = (2 * (rect.top - e.clientY)) / canvas.height + 1;
+
             render();
         }
     });
 };
 
+/**
+ *
+ * @param {mat3} m
+ * @param {vec2} v
+ * @returns {vec2} transformed point
+ */
+const transformPoint = (m, v) => {
+    const v0 = v[0],
+        v1 = v[1],
+        d = v0 * m[2] + v1 * m[5] + m[8];
+
+    return [
+        (v0 * m[0] + v1 * m[3] + m[6]) / d,
+        (v0 * m[1] + v1 * m[4] + m[7]) / d,
+    ];
+};
+/**
+ * Update the view projection matrix
+ */
+const updateViewProjection = () => {
+    const projectionMatrix = mat3(projection),
+        cameraMatrix = makeCameraMatrix();
+    let viewMatrix = inverse3(cameraMatrix);
+
+    viewProjectionMatrix = mult(projectionMatrix, viewMatrix);
+};
+
+/**
+ *
+ * @returns {mat3} camera matrix
+ */
+const makeCameraMatrix = () => {
+    const zoomScale = 1 / camera.zoom;
+    let cameraMatrix = mat3(1, 0, 0, 0, 1, 0, 0, 0, 1);
+
+    cameraMatrix = mult(cameraMatrix, translate(camera.x, camera.y));
+    cameraMatrix = mult(
+        cameraMatrix,
+        rotate(camera.rotation, vec3(0, 0, 1), 3)
+    );
+
+    return mult(cameraMatrix, scale(zoomScale, zoomScale));
+};
+
+/**
+ * Render the scene
+ */
 const render = () => {
     let program = initShaders(gl, "vertex-shader", "fragment-shader");
     gl.useProgram(program);
@@ -104,7 +151,7 @@ const render = () => {
     gl.vertexAttribPointer(vPosition, 2, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(vPosition);
 
-    escapeMax = gl.getUniformLocation(program, "nt");
+    let escapeMax = gl.getUniformLocation(program, "nt");
     gl.uniform1i(escapeMax, itterationDepth);
 
     let matrix = gl.getUniformLocation(program, "matrix");
@@ -119,43 +166,14 @@ const render = () => {
     let c_zoom = gl.getUniformLocation(program, "c_zoom");
     gl.uniform1f(c_zoom, camera.zoom);
 
-    let cam_x = gl.getUniformLocation(program, "cam_x");
-    gl.uniform1f(cam_x, camera.x);
+    let camera_x = gl.getUniformLocation(program, "camera_x");
+    gl.uniform1f(camera_x, camera.x);
 
-    let cam_y = gl.getUniformLocation(program, "cam_y");
-    gl.uniform1f(cam_y, camera.y);
+    let camera_y = gl.getUniformLocation(program, "camera_y");
+    gl.uniform1f(camera_y, camera.y);
 
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.drawArrays(gl.TRIANGLE_FAN, 0, vertices.length);
 
     updateViewProjection();
-};
-
-const transformPoint = (m, v) => {
-    const v0 = v[0],
-        v1 = v[1],
-        d = v0 * m[2] + v1 * m[5] + m[8];
-
-    return [
-        (v0 * m[0] + v1 * m[3] + m[6]) / d,
-        (v0 * m[1] + v1 * m[4] + m[7]) / d,
-    ];
-};
-
-const updateViewProjection = () => {
-    const projectionMat = mat3(projection),
-        cameraMat = makeCameraMatrix();
-    let viewMat = inverse3(cameraMat);
-
-    viewProjectionMatrix = mult(projectionMat, viewMat);
-};
-
-const makeCameraMatrix = () => {
-    const zoomScale = 1 / camera.zoom;
-    let cameraMat = mat3(1, 0, 0, 0, 1, 0, 0, 0, 1);
-
-    cameraMat = mult(cameraMat, translate(camera.x, camera.y));
-    cameraMat = mult(cameraMat, rotate(camera.rotation, vec3(0, 0, 1), 3));
-
-    return mult(cameraMat, scale(zoomScale, zoomScale));
 };
